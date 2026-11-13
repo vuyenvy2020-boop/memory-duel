@@ -22,9 +22,48 @@ const LEVELS = {
   hard: { label: "Khó", pairs: 12, cols: 6, remember: 0.95 },
 };
 const rooms = {};
+const queues = { easy: [], normal: [], hard: [] }; // hàng chờ ghép trận
+const leaderboard = new Map(); // profileId -> thống kê
+
+function leaveQueues(id) {
+  for (const k of Object.keys(queues)) queues[k] = queues[k].filter((w) => w.id !== id);
+}
+
+// Ghi thống kê sau ván giữa 2 người thật
+function recordStats(room, winner) {
+  if (room.ai) return;
+  for (const p of room.players) {
+    const pid = io.sockets.sockets.get(p.id)?.data?.profileId;
+    if (!pid) continue;
+    const s = leaderboard.get(pid) || {
+      name: p.name, avatar: p.avatar, games: 0, wins: 0, draws: 0, points: 0,
+    };
+    s.name = p.name;
+    s.avatar = p.avatar;
+    s.games++;
+    if (winner === "draw") {
+      s.draws++;
+      s.points += 1;
+    } else if (winner === p.mark) {
+      s.wins++;
+      s.points += 3;
+    }
+    leaderboard.set(pid, s);
+  }
+}
+
+function topPlayers() {
+  return [...leaderboard.values()]
+    .sort((a, b) => b.points - a.points || b.wins - a.wins)
+    .slice(0, 10);
+}
 
 const other = (m) => (m === "X" ? "O" : "X");
-const cleanAvatar = (a, fallback) => (AVATARS.includes(a) ? a : fallback);
+const PREMIUM_AVATARS = ["🐲", "🦁", "🦖", "🦋", "🐬", "🦜"];
+const FRAMES = ["none", "gold", "neon", "flower", "rainbow"];
+const cleanAvatar = (a, fallback) =>
+  AVATARS.includes(a) || PREMIUM_AVATARS.includes(a) ? a : fallback;
+const cleanFrame = (f) => (FRAMES.includes(f) ? f : "none");
 const cleanName = (n) => String(n || "Người chơi").trim().slice(0, 16) || "Người chơi";
 const newRoomId = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
@@ -60,7 +99,10 @@ function newRoom(players, level, ai) {
 
 function startInfo(room) {
   return {
-    players: room.players,
+    players: room.players.map((p) => ({
+      ...p,
+      frame: io.sockets.sockets.get(p.id)?.data?.frame || "none",
+    })),
     turn: room.turn,
     scores: room.scores,
     pairs: room.pairs,
@@ -69,6 +111,7 @@ function startInfo(room) {
     level: room.level,
     timeLeft: TURN_TIME,
     vsAI: !!room.ai,
+    mode: room.mode || (room.ai ? "ai" : "friend"),
   };
 }
 
@@ -157,6 +200,7 @@ function finishGame(roomId) {
   const { X, O } = room.pairs;
   const winner = X === O ? "draw" : X > O ? "X" : "O";
   if (winner !== "draw") room.scores[winner]++;
+  recordStats(room, winner);
   io.to(roomId).emit("gameOver", { winner, pairs: room.pairs, scores: room.scores });
 }
 
@@ -228,6 +272,55 @@ function handleFlip(roomId, mark, index) {
 
 io.on("connection", (socket) => {
   console.log("Có người kết nối:", socket.id);
+  
+  // Client báo hồ sơ (để tính bảng xếp hạng và hiện khung)
+  socket.on("hello", ({ profileId, frame }) => {
+    socket.data.profileId = String(profileId || "").slice(0, 40);
+    socket.data.frame = cleanFrame(frame);
+  });
+
+  socket.on("getLeaderboard", (cb) => {
+    if (typeof cb === "function") cb(topPlayers());
+  });
+
+  // Ghép trận: hai người cùng cấp độ được xếp chung phòng
+  socket.on("findMatch", ({ name, avatar, level }) => {
+    const lv = LEVELS[level] ? level : "normal";
+    leaveQueues(socket.id);
+    let waiting = null;
+    while (queues[lv].length) {
+      const w = queues[lv].shift();
+      if (io.sockets.sockets.get(w.id)) {
+        waiting = w;
+        break;
+      }
+    }
+    const me = { id: socket.id, name: cleanName(name), avatar: cleanAvatar(avatar, "🐧") };
+    if (!waiting) {
+      queues[lv].push(me);
+      return;
+    }
+    const roomId = newRoomId();
+    const room = newRoom(
+      [
+        { ...waiting, mark: "X", avatar: cleanAvatar(waiting.avatar, "🦊") },
+        { ...me, mark: "O" },
+      ],
+      lv,
+      null
+    );
+    room.mode = "match";
+    rooms[roomId] = room;
+    io.sockets.sockets.get(waiting.id).join(roomId);
+    socket.join(roomId);
+    io.to(waiting.id).emit("matchFound", { roomId, mark: "X" });
+    socket.emit("matchFound", { roomId, mark: "O" });
+    io.to(roomId).emit("gameStart", startInfo(room));
+    startTurnTimer(roomId);
+  });
+
+  socket.on("cancelMatch", () => leaveQueues(socket.id));
+  socket.on("disconnect", () => leaveQueues(socket.id));
 
   // Tạo phòng chờ bạn bè
   socket.on("createRoom", ({ name, avatar, level }, cb) => {

@@ -1,9 +1,17 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { socket } from "./socket";
 import { Shell } from "./Scene";
-import AvatarPicker from "./AvatarPicker";
-import AIPlay from "./AIPlay";
-import LevelPicker from "./LevelPicker";
+import Login from "./Login";
+import Home from "./Home";
+import {
+  useProfile,
+  recordGame,
+  addNote,
+  claimMission,
+  claimDaily,
+  buyAvatar,
+  buyFrame,
+} from "./profile";
 import "./App.css";
 
 const TURN_TIME = 20; // khớp với TURN_TIME ở server
@@ -33,49 +41,63 @@ function beep(freq, dur = 0.1, type = "sine") {
   }
 }
 
-/* ---------- Avatar con vật ---------- */
-function Avatar({ mark, emoji }) {
-  return <div className={"avatar " + mark}>{emoji || "🙂"}</div>;
+/* ---------- Avatar con vật (có khung) ---------- */
+function Avatar({ mark, emoji, frame }) {
+  return (
+    <div className={"avatar " + mark + " frame-" + (frame || "none")}>{emoji || "🙂"}</div>
+  );
 }
 
 export default function App() {
-  const [screen, setScreen] = useState("home"); // home | waiting | playing
-  const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState(() => {
-    try {
-      return localStorage.getItem("xo-avatar") || "🦊";
-    } catch {
-      return "🦊";
-    }
-  });
-  const [level, setLevel] = useState("normal"); // độ khó khi tạo phòng bạn bè
-  const [roomInput, setRoomInput] = useState("");
+  const P = useProfile();
+  const profile = P.profile;
+
+  const [screen, setScreen] = useState("home"); // home | matching | waiting | playing
+  const [level, setLevel] = useState("normal");
   const [roomId, setRoomId] = useState("");
   const [myMark, setMyMark] = useState(null);
   const [players, setPlayers] = useState([]);
   const [cards, setCards] = useState([]);
   const [cols, setCols] = useState(4);
   const [roomLevel, setRoomLevel] = useState("normal");
+  const [gameMode, setGameMode] = useState("friend");
   const [turn, setTurn] = useState("X");
   const [result, setResult] = useState(null);
+  const [earned, setEarned] = useState(0);
   const [pairs, setPairs] = useState({ X: 0, O: 0 });
   const [scores, setScores] = useState({ X: 0, O: 0 });
   const [timeLeft, setTimeLeft] = useState(TURN_TIME);
   const [muted, setMuted] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState("");
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [reactions, setReactions] = useState([]);
   const [vsAI, setVsAI] = useState(false);
   const chatRef = useRef(null);
 
-  useEffect(() => {
+  // Mã phòng lấy từ link mời (?room=ABCDE)
+  const [invite] = useState(() => {
     try {
-      localStorage.setItem("xo-avatar", avatar);
+      const c = new URLSearchParams(window.location.search).get("room");
+      return c && /^[A-Za-z0-9]{5}$/.test(c) ? c.toUpperCase() : "";
     } catch {
-      /* bỏ qua nếu trình duyệt chặn */
+      return "";
     }
-  }, [avatar]);
+  });
+  const invited = useRef(false);
+
+  // Các thao tác với hồ sơ, truyền xuống trang chủ
+  const api = {
+    claimMission: (id) => P.update((p) => claimMission(p, id)),
+    claimDaily: () => P.update(claimDaily),
+    buyAvatar: (e) => P.update((p) => buyAvatar(p, e)),
+    buyFrame: (id) => P.update((p) => buyFrame(p, id)),
+    setAvatar: (e) => P.update((p) => ({ ...p, avatar: e })),
+    setFrame: (id) => P.update((p) => ({ ...p, frame: id })),
+    readNotes: () =>
+      P.update((p) => ({ ...p, notes: p.notes.map((n) => ({ ...n, read: true })) })),
+    logout: P.logout,
+  };
 
   // Các mảnh pháo giấy, tạo một lần
   const confetti = useMemo(
@@ -90,8 +112,29 @@ export default function App() {
     []
   );
 
+  /* ----- Báo hồ sơ cho server (để xếp hạng và hiện khung) ----- */
+  useEffect(() => {
+    if (!profile) return;
+    const hello = () => socket.emit("hello", { profileId: profile.id, frame: profile.frame });
+    hello();
+    socket.on("connect", hello);
+    return () => socket.off("connect", hello);
+  }, [profile?.id, profile?.frame]);
+
+  /* ----- Thông báo khi mở link mời ----- */
+  useEffect(() => {
+    if (!invite || !profile || invited.current) return;
+    invited.current = true;
+    P.update((p) => addNote(p, "invite", `Bạn được mời vào phòng ${invite}.`, { code: invite }));
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [profile?.id]);
+
   /* ----- Nhận sự kiện từ server ----- */
   useEffect(() => {
+    socket.on("matchFound", ({ roomId, mark }) => {
+      setRoomId(roomId);
+      setMyMark(mark);
+    });
     socket.on("gameStart", (d) => {
       setPlayers(d.players);
       setCards(
@@ -99,6 +142,7 @@ export default function App() {
       );
       setCols(d.cols);
       setRoomLevel(d.level);
+      setGameMode(d.mode || "friend");
       setTurn(d.turn);
       setScores(d.scores);
       setPairs(d.pairs);
@@ -148,6 +192,7 @@ export default function App() {
       window.location.reload();
     });
     return () => {
+      socket.off("matchFound");
       socket.off("gameStart");
       socket.off("flipped");
       socket.off("matched");
@@ -173,18 +218,38 @@ export default function App() {
     }
   }, [timeLeft]);
 
-  // Âm thanh khi có kết quả
+  // Khi hết ván: âm thanh, cộng xu, ghi lịch sử và nhiệm vụ
   useEffect(() => {
     if (!result) return;
-    if (result === "draw") beep(440, 0.25);
-    else if (result === myMark) {
+    const r = result === "draw" ? "draw" : result === myMark ? "win" : "lose";
+    if (r === "draw") beep(440, 0.25);
+    else if (r === "win") {
       beep(784, 0.15);
       setTimeout(() => beep(988, 0.3), 150);
     } else {
       beep(330, 0.2);
       setTimeout(() => beep(220, 0.35), 180);
     }
-  }, [result, myMark]);
+    if (!profile) return;
+    const oppMark = myMark === "X" ? "O" : "X";
+    const opp = players.find((p) => p.mark === oppMark);
+    const human = !vsAI;
+    const coins = r === "win" ? (human ? 20 : 10) : r === "draw" ? 8 : 5;
+    setEarned(coins);
+    P.update((p) =>
+      recordGame(p, {
+        result: r,
+        opp: opp?.name || "?",
+        oppAvatar: opp?.avatar || "",
+        mode: gameMode,
+        level: roomLevel,
+        mine: pairs[myMark],
+        theirs: pairs[oppMark],
+        human,
+        coins,
+      })
+    );
+  }, [result]);
 
   // Chat tự cuộn xuống tin mới nhất
   useEffect(() => {
@@ -197,34 +262,49 @@ export default function App() {
     setMuted(!soundOn);
   };
 
-  const createRoom = () => {
-    if (!name.trim()) return alert("Nhập tên trước nhé");
-    socket.emit("createRoom", { name: name.trim(), avatar, level }, ({ roomId, mark }) => {
-      setRoomId(roomId);
-      setMyMark(mark);
-      setScreen("waiting");
-    });
-  };
-
-  const startAI = (lv) => {
-    if (!name.trim()) return alert("Nhập tên trước nhé");
-    socket.emit("createAIRoom", { name: name.trim(), avatar, level: lv }, ({ roomId, mark }) => {
-      setRoomId(roomId);
-      setMyMark(mark);
-    });
-  };
-
-  const joinRoom = () => {
-    if (!name.trim()) return alert("Nhập tên trước nhé");
+  const onCreate = (lv) => {
+    setLevel(lv);
     socket.emit(
-      "joinRoom",
-      { roomId: roomInput.trim().toUpperCase(), name: name.trim(), avatar },
-      (res) => {
-        if (res.error) return alert(res.error);
-        setRoomId(res.roomId);
-        setMyMark(res.mark);
+      "createRoom",
+      { name: profile.name, avatar: profile.avatar, level: lv },
+      ({ roomId, mark }) => {
+        setRoomId(roomId);
+        setMyMark(mark);
+        setScreen("waiting");
       }
     );
+  };
+
+  const onMatch = (lv) => {
+    setLevel(lv);
+    setScreen("matching");
+    socket.emit("findMatch", { name: profile.name, avatar: profile.avatar, level: lv });
+  };
+
+  const cancelMatch = () => {
+    socket.emit("cancelMatch");
+    setScreen("home");
+  };
+
+  const onAI = (lv) => {
+    socket.emit(
+      "createAIRoom",
+      { name: profile.name, avatar: profile.avatar, level: lv },
+      ({ roomId, mark }) => {
+        setRoomId(roomId);
+        setMyMark(mark);
+      }
+    );
+  };
+
+  const onJoin = (code) => {
+    const c = String(code || "").trim().toUpperCase();
+    if (c.length < 5) return alert("Nhập đủ 5 ký tự mã phòng nhé");
+    socket.emit("joinRoom", { roomId: c, name: profile.name, avatar: profile.avatar }, (res) => {
+      if (res.error) return alert(res.error);
+      setRoomId(res.roomId);
+      setMyMark(res.mark);
+    });
   };
 
   const flip = (index) => {
@@ -234,10 +314,10 @@ export default function App() {
     socket.emit("flip", { roomId, index });
   };
 
-  const copyCode = () => {
-    navigator.clipboard?.writeText(roomId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const copy = (text, key) => {
+    navigator.clipboard?.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(""), 1500);
   };
 
   const sendChat = () => {
@@ -249,71 +329,46 @@ export default function App() {
 
   const sendReaction = (emoji) => socket.emit("reaction", { roomId, emoji });
 
-  /* ---------- Màn hình Home ---------- */
+  /* ---------- Chưa có tài khoản: màn hình đăng nhập ---------- */
+  if (!profile)
+    return (
+      <Shell mode="home">
+        <Login accounts={P.accounts} onLogin={P.login} onCreate={P.create} />
+      </Shell>
+    );
+
+  /* ---------- Trang chủ ---------- */
   if (screen === "home")
     return (
       <Shell mode="home">
-        <div className="card home-card">
-          <header className="home-head">
-            <div className="mascots">
-              <span className="m1">{avatar}</span>
-              <span className="m-vs">VS</span>
-              <span className="m2">🃏</span>
-            </div>
-            <h1 className="logo">
-              <span className="lx">Memory</span> <span className="lo">Duel</span>
-            </h1>
-            <p className="tagline">Lật thẻ tìm cặp giống nhau, ai nhiều cặp hơn là thắng</p>
-          </header>
+        <Home
+          profile={profile}
+          api={api}
+          invite={invite}
+          onMatch={onMatch}
+          onCreate={onCreate}
+          onJoin={onJoin}
+          onAI={onAI}
+        />
+      </Shell>
+    );
 
-          <div className="home-body">
-            <section className="home-col">
-              <h3 className="sec-title">
-                <span>1</span> Thông tin của bạn
-              </h3>
-              <input
-                placeholder="Nhập tên của bạn"
-                maxLength={16}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <AvatarPicker value={avatar} onChange={setAvatar} />
-              <LevelPicker value={level} onChange={setLevel} />
-            </section>
-
-            <section className="home-col">
-              <h3 className="sec-title">
-                <span>2</span> Chọn cách chơi
-              </h3>
-
-              <div className="friend-box">
-                <div className="ai-head">
-                  <span className="ai-title">👥 Chơi với bạn bè</span>
-                  <span className="ai-note">2 người, 2 máy</span>
-                </div>
-                <button className="btn primary" onClick={createRoom}>
-                  Tạo phòng mới
-                </button>
-                <div className="divider">
-                  <span>hoặc</span>
-                </div>
-                <div className="join-row">
-                  <input
-                    className="code"
-                    placeholder="MÃ PHÒNG"
-                    maxLength={5}
-                    value={roomInput}
-                    onChange={(e) => setRoomInput(e.target.value)}
-                  />
-                  <button className="btn" onClick={joinRoom}>
-                    Vào phòng
-                  </button>
-                </div>
-              </div>
-
-              <AIPlay onStart={startAI} />
-            </section>
+  /* ---------- Đang ghép trận ---------- */
+  if (screen === "matching")
+    return (
+      <Shell mode="wait">
+        <div className="card wait-card">
+          <div className="wait-badge">⚡ Ghép trận · {LEVEL_LABEL[level]}</div>
+          <h2 className="title">Đang tìm đối thủ...</h2>
+          <p className="tagline">Khi có người cùng cấp độ, trận đấu sẽ tự bắt đầu</p>
+          <div className="dots">
+            <span></span>
+            <span></span>
+            <span></span>
           </div>
+          <button className="btn" onClick={cancelMatch}>
+            Hủy tìm trận
+          </button>
         </div>
       </Shell>
     );
@@ -325,7 +380,7 @@ export default function App() {
         <div className="card wait-card">
           <div className="wait-badge">🌙 Phòng chờ · {LEVEL_LABEL[level]}</div>
           <h2 className="title">Đang chờ đối thủ...</h2>
-          <p className="tagline">Gửi mã phòng này cho bạn bè để cùng vào chơi</p>
+          <p className="tagline">Gửi mã hoặc link này cho bạn bè để cùng vào chơi</p>
 
           <div className="code-tiles">
             {roomId.split("").map((ch, i) => (
@@ -335,14 +390,24 @@ export default function App() {
             ))}
           </div>
 
-          <button className="btn primary" onClick={copyCode}>
-            {copied ? "✓ Đã sao chép!" : "Sao chép mã phòng"}
-          </button>
+          <div className="two-btn">
+            <button className="btn primary" onClick={() => copy(roomId, "code")}>
+              {copied === "code" ? "✓ Đã chép mã" : "Sao chép mã"}
+            </button>
+            <button
+              className="btn"
+              onClick={() => copy(window.location.origin + "/?room=" + roomId, "link")}
+            >
+              {copied === "link" ? "✓ Đã chép link" : "Sao chép link mời"}
+            </button>
+          </div>
 
           <div className="slots">
             <div className="slot ready">
-              <div className={"wait-avatar " + myMark}>{avatar}</div>
-              <b>{name}</b>
+              <div className={"wait-avatar " + myMark + " frame-" + profile.frame}>
+                {profile.avatar}
+              </div>
+              <b>{profile.name}</b>
               <small>Sẵn sàng</small>
             </div>
             <div className="vs">VS</div>
@@ -410,7 +475,7 @@ export default function App() {
                     <div
                       className={"player " + m + (turn === m && !result ? " active" : "")}
                     >
-                      <Avatar mark={m} emoji={p?.avatar} />
+                      <Avatar mark={m} emoji={p?.avatar} frame={p?.frame} />
                       <div className="p-info">
                         <b>{p?.name || "..."}</b>
                         <div className="p-mark">
@@ -541,6 +606,7 @@ export default function App() {
               <p className="sub">
                 Số cặp: bạn {pairs[myMark]} - đối thủ {pairs[oppMark]}
               </p>
+              <p className="sub reward">+{earned} 🪙 xu</p>
               <div className="popup-actions">
                 <button
                   className="btn primary"
@@ -549,7 +615,7 @@ export default function App() {
                   Chơi lại
                 </button>
                 <button className="btn" onClick={() => window.location.reload()}>
-                  Thoát
+                  Về trang chủ
                 </button>
               </div>
             </div>
