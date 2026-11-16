@@ -3,19 +3,39 @@ import { useRef, useState } from "react";
 const KEY = "memory-duel-accounts";
 
 export const PREMIUM_AVATARS = [
-  { e: "🐲", price: 150 },
-  { e: "🦁", price: 150 },
-  { e: "🦖", price: 200 },
   { e: "🦋", price: 100 },
+  { e: "🐢", price: 100 },
+  { e: "🐝", price: 100 },
   { e: "🐬", price: 120 },
   { e: "🦜", price: 120 },
+  { e: "🦔", price: 120 },
+  { e: "🦩", price: 130 },
+  { e: "🐳", price: 130 },
+  { e: "🦥", price: 140 },
+  { e: "🐲", price: 150 },
+  { e: "🦁", price: 150 },
+  { e: "🐺", price: 160 },
+  { e: "🦅", price: 170 },
+  { e: "🦚", price: 180 },
+  { e: "🦖", price: 200 },
+  { e: "🦈", price: 220 },
+  { e: "🧙", price: 250 },
+  { e: "🧚", price: 250 },
+  { e: "🦸", price: 280 },
+  { e: "🧛", price: 300 },
 ];
 export const FRAMES = [
   { id: "none", label: "Không khung", price: 0 },
   { id: "gold", label: "Vàng", price: 100 },
+  { id: "emerald", label: "Lục bảo", price: 120 },
+  { id: "candy", label: "Kẹo ngọt", price: 150 },
   { id: "neon", label: "Neon", price: 150 },
   { id: "flower", label: "Hoa", price: 200 },
+  { id: "ice", label: "Băng giá", price: 250 },
+  { id: "fire", label: "Lửa", price: 250 },
   { id: "rainbow", label: "Cầu vồng", price: 300 },
+  { id: "galaxy", label: "Thiên hà", price: 350 },
+  { id: "royal", label: "Hoàng gia", price: 400 },
 ];
 export const MISSIONS = [
   { id: "play3", label: "Chơi 3 ván", goal: 3, reward: 30 },

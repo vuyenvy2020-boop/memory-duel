@@ -1,10 +1,10 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { socket } from "./socket";
 import { Shell } from "./Scene";
-import Login from "./Login";
+import AuthPage from "./AuthPage";
 import Home from "./Home";
+import { useAuth } from "./auth";
 import {
-  useProfile,
   recordGame,
   addNote,
   claimMission,
@@ -49,7 +49,7 @@ function Avatar({ mark, emoji, frame }) {
 }
 
 export default function App() {
-  const P = useProfile();
+  const P = useAuth();
   const profile = P.profile;
 
   const [screen, setScreen] = useState("home"); // home | matching | waiting | playing
@@ -112,14 +112,6 @@ export default function App() {
     []
   );
 
-  /* ----- Báo hồ sơ cho server (để xếp hạng và hiện khung) ----- */
-  useEffect(() => {
-    if (!profile) return;
-    const hello = () => socket.emit("hello", { profileId: profile.id, frame: profile.frame });
-    hello();
-    socket.on("connect", hello);
-    return () => socket.off("connect", hello);
-  }, [profile?.id, profile?.frame]);
 
   /* ----- Thông báo khi mở link mời ----- */
   useEffect(() => {
@@ -218,7 +210,7 @@ export default function App() {
     }
   }, [timeLeft]);
 
-  // Khi hết ván: âm thanh, cộng xu, ghi lịch sử và nhiệm vụ
+    // Khi hết ván: âm thanh, cộng xu, ghi lịch sử và nhiệm vụ
   useEffect(() => {
     if (!result) return;
     const r = result === "draw" ? "draw" : result === myMark ? "win" : "lose";
@@ -231,24 +223,33 @@ export default function App() {
       setTimeout(() => beep(220, 0.35), 180);
     }
     if (!profile) return;
-    const oppMark = myMark === "X" ? "O" : "X";
-    const opp = players.find((p) => p.mark === oppMark);
-    const human = !vsAI;
-    const coins = r === "win" ? (human ? 20 : 10) : r === "draw" ? 8 : 5;
-    setEarned(coins);
-    P.update((p) =>
-      recordGame(p, {
-        result: r,
-        opp: opp?.name || "?",
-        oppAvatar: opp?.avatar || "",
-        mode: gameMode,
-        level: roomLevel,
-        mine: pairs[myMark],
-        theirs: pairs[oppMark],
-        human,
-        coins,
-      })
-    );
+    try {
+      const oppMark = myMark === "X" ? "O" : "X";
+      const opp = players.find((p) => p.mark === oppMark);
+      const human = !vsAI;
+      const coins = r === "win" ? (human ? 20 : 10) : r === "draw" ? 8 : 5;
+      setEarned(coins);
+      P.update((p) => {
+        try {
+          return recordGame(p, {
+            result: r,
+            opp: opp?.name || "?",
+            oppAvatar: opp?.avatar || "",
+            mode: gameMode,
+            level: roomLevel,
+            mine: pairs[myMark] || 0,
+            theirs: pairs[oppMark] || 0,
+            human,
+            coins,
+          });
+        } catch (e) {
+          console.error("Không ghi được kết quả ván:", e);
+          return p;
+        }
+      });
+    } catch (e) {
+      console.error("Lỗi khi xử lý kết quả ván:", e);
+    }
   }, [result]);
 
   // Chat tự cuộn xuống tin mới nhất
@@ -333,7 +334,7 @@ export default function App() {
   if (!profile)
     return (
       <Shell mode="home">
-        <Login accounts={P.accounts} onLogin={P.login} onCreate={P.create} />
+        <AuthPage auth={P} />
       </Shell>
     );
 

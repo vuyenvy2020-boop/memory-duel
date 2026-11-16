@@ -2,6 +2,10 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(cors());
@@ -59,8 +63,14 @@ function topPlayers() {
 }
 
 const other = (m) => (m === "X" ? "O" : "X");
-const PREMIUM_AVATARS = ["🐲", "🦁", "🦖", "🦋", "🐬", "🦜"];
-const FRAMES = ["none", "gold", "neon", "flower", "rainbow"];
+const PREMIUM_AVATARS = [
+  "🐲", "🦁", "🦖", "🦋", "🐬", "🦜", "🐢", "🐝", "🦔", "🦩",
+  "🐳", "🦥", "🐺", "🦅", "🦚", "🦈", "🧙", "🧚", "🦸", "🧛",
+];
+const FRAMES = [
+  "none", "gold", "emerald", "candy", "neon", "flower",
+  "ice", "fire", "rainbow", "galaxy", "royal",
+];
 const cleanAvatar = (a, fallback) =>
   AVATARS.includes(a) || PREMIUM_AVATARS.includes(a) ? a : fallback;
 const cleanFrame = (f) => (FRAMES.includes(f) ? f : "none");
@@ -119,6 +129,62 @@ function clearTimers(room) {
   clearTimeout(room.timer);
   clearTimeout(room.pairTimer);
   clearTimeout(room.botTimer);
+}
+
+/* ================= TÀI KHOẢN: ĐĂNG KÝ, ĐĂNG NHẬP ================= */
+
+const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "data");
+const USERS_FILE = path.join(DATA_DIR, "users.json");
+let users = {};
+try {
+  users = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+} catch {
+  users = {};
+}
+let saveTimer = null;
+function persistUsers() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      fs.writeFileSync(USERS_FILE, JSON.stringify(users));
+    } catch (e) {
+      console.error("Không lưu được users.json:", e.message);
+    }
+  }, 300);
+}
+
+const sessions = new Map(); // token -> khóa tài khoản
+const onlineUser = new Map(); // khóa tài khoản -> id socket đang dùng
+const failed = new Map(); // khóa tài khoản -> số lần nhập sai
+const USER_RE = /^[A-Za-z0-9_]{3,20}$/;
+
+const hashPw = (pw, salt) => crypto.scryptSync(pw, salt, 64).toString("hex");
+function checkPw(pw, u) {
+  const a = Buffer.from(hashPw(pw, u.salt), "hex");
+  const b = Buffer.from(u.hash, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+const publicUser = (key) => ({
+  username: users[key].username,
+  display: users[key].display,
+  avatar: users[key].avatar,
+});
+
+// Mỗi tài khoản chỉ đăng nhập ở một nơi: nơi cũ bị đá ra
+function attachSession(socket, key) {
+  const oldId = onlineUser.get(key);
+  if (oldId && oldId !== socket.id) {
+    const old = io.sockets.sockets.get(oldId);
+    if (old) {
+      old.emit("kicked");
+      old.disconnect(true);
+    }
+  }
+  onlineUser.set(key, socket.id);
+  socket.data.user = key;
+  socket.data.profileId = key;
+  socket.data.frame = cleanFrame(users[key].profile?.frame);
 }
 
 /* ================= ĐỒNG HỒ LƯỢT ================= */
@@ -273,10 +339,92 @@ function handleFlip(roomId, mark, index) {
 io.on("connection", (socket) => {
   console.log("Có người kết nối:", socket.id);
   
-  // Client báo hồ sơ (để tính bảng xếp hạng và hiện khung)
-  socket.on("hello", ({ profileId, frame }) => {
-    socket.data.profileId = String(profileId || "").slice(0, 40);
-    socket.data.frame = cleanFrame(frame);
+    // Chưa đăng nhập thì chỉ được dùng các sự kiện đăng nhập và xem xếp hạng
+  socket.use(([event], next) => {
+    const open = ["auth:register", "auth:login", "auth:resume", "getLeaderboard"];
+    if (open.includes(event) || socket.data.user) return next();
+    next(new Error("Chưa đăng nhập"));
+  });
+
+  socket.on("auth:register", ({ username, password, display, avatar } = {}, cb) => {
+    if (typeof cb !== "function") return;
+    const uname = String(username || "").trim();
+    const key = uname.toLowerCase();
+    const pw = String(password || "");
+    if (!USER_RE.test(uname))
+      return cb({ error: "Tên đăng nhập gồm 3 đến 20 ký tự: chữ, số hoặc dấu gạch dưới", field: "username" });
+    if (pw.length < 6 || pw.length > 100)
+      return cb({ error: "Mật khẩu cần từ 6 đến 100 ký tự", field: "password" });
+    if (users[key])
+      return cb({ error: "Tên đăng nhập này đã có người dùng", field: "username" });
+    const salt = crypto.randomBytes(16).toString("hex");
+    users[key] = {
+      username: uname,
+      display: cleanName(display || uname),
+      avatar: cleanAvatar(avatar, "🦊"),
+      salt,
+      hash: hashPw(pw, salt),
+      createdAt: Date.now(),
+      profile: null,
+    };
+    persistUsers();
+    const token = crypto.randomBytes(24).toString("hex");
+    sessions.set(token, key);
+    attachSession(socket, key);
+    cb({ ok: true, token, user: publicUser(key), profile: null });
+  });
+
+  socket.on("auth:login", ({ username, password } = {}, cb) => {
+    if (typeof cb !== "function") return;
+    const key = String(username || "").trim().toLowerCase();
+    const f = failed.get(key);
+    if (f && f.until > Date.now()) {
+      const s = Math.ceil((f.until - Date.now()) / 1000);
+      return cb({ error: "Nhập sai nhiều lần, hãy thử lại sau " + s + " giây" });
+    }
+    const u = users[key];
+    if (!u || !checkPw(String(password || ""), u)) {
+      const n = (f?.n || 0) + 1;
+      failed.set(key, n >= 5 ? { n: 0, until: Date.now() + 30000 } : { n, until: 0 });
+      return cb({ error: "Sai tên đăng nhập hoặc mật khẩu" });
+    }
+    failed.delete(key);
+    const token = crypto.randomBytes(24).toString("hex");
+    sessions.set(token, key);
+    attachSession(socket, key);
+    cb({ ok: true, token, user: publicUser(key), profile: u.profile });
+  });
+
+  // Mở lại trang (F5) vẫn giữ phiên đăng nhập của tab
+  socket.on("auth:resume", ({ token } = {}, cb) => {
+    if (typeof cb !== "function") return;
+    const key = sessions.get(String(token || ""));
+    if (!key || !users[key]) return cb({ ok: false });
+    attachSession(socket, key);
+    cb({ ok: true, user: publicUser(key), profile: users[key].profile });
+  });
+
+  socket.on("auth:logout", ({ token } = {}) => {
+    sessions.delete(String(token || ""));
+    const key = socket.data.user;
+    if (key && onlineUser.get(key) === socket.id) onlineUser.delete(key);
+    socket.data.user = null;
+    socket.data.profileId = null;
+  });
+
+  // Lưu hồ sơ (xu, nhiệm vụ, lịch sử...) của tài khoản đang đăng nhập
+  socket.on("profile:save", ({ profile } = {}) => {
+    const key = socket.data.user;
+    if (!key || !profile || typeof profile !== "object") return;
+    if (JSON.stringify(profile).length > 200000) return;
+    users[key].profile = profile;
+    socket.data.frame = cleanFrame(profile.frame);
+    persistUsers();
+  });
+
+  socket.on("disconnect", () => {
+    const key = socket.data.user;
+    if (key && onlineUser.get(key) === socket.id) onlineUser.delete(key);
   });
 
   socket.on("getLeaderboard", (cb) => {

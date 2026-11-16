@@ -152,7 +152,7 @@ export default function Home({ profile, api, invite, onMatch, onCreate, onJoin, 
       </section>
 
       <button className="link-btn" onClick={api.logout}>
-        Đổi tài khoản
+        Đăng xuất
       </button>
 
       {/* Các cửa sổ */}

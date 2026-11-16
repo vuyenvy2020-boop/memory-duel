@@ -93,7 +93,7 @@ export function RewardsPanel({ profile, api }) {
         </button>
       </div>
 
-      <h4 className="sub-title">Nhân vật của bạn</h4>
+      <h4 className="sub-title">Nhân vật miễn phí</h4>
       <div className="shop-grid">
         {AVATARS.map((e) => (
           <button
@@ -104,6 +104,10 @@ export function RewardsPanel({ profile, api }) {
             {e}
           </button>
         ))}
+      </div>
+
+      <h4 className="sub-title">Nhân vật mở khóa bằng xu</h4>
+      <div className="shop-grid">
         {PREMIUM_AVATARS.map((a) =>
           profile.ownedAvatars.includes(a.e) ? (
             <button
@@ -129,13 +133,13 @@ export function RewardsPanel({ profile, api }) {
       <p className="hint">Nhân vật mờ là chưa mở khóa, đủ xu thì bấm để mua.</p>
 
       <h4 className="sub-title">Khung hồ sơ</h4>
-      <div className="frame-list">
+      <div className="frame-grid">
         {FRAMES.map((f) => {
           const owned = profile.ownedFrames.includes(f.id);
           const on = profile.frame === f.id;
           return (
-            <div className="frame-item" key={f.id}>
-              <Face avatar={profile.avatar} frame={f.id} size={54} />
+            <div className={"frame-card" + (on ? " on" : "")} key={f.id}>
+              <Face avatar={profile.avatar} frame={f.id} size={56} />
               <b>{f.label}</b>
               {owned ? (
                 <button
@@ -161,7 +165,6 @@ export function RewardsPanel({ profile, api }) {
     </>
   );
 }
-
 /* 🏆 Bảng xếp hạng */
 export function LeaderboardPanel({ meName }) {
   const [list, setList] = useState(null);
