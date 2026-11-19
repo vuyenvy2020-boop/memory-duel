@@ -509,7 +509,7 @@ export default function App() {
               </div>
             )}
 
-            <div className="mboard" style={{ "--cols": cols }}>
+            <div className="mboard" style={{ "--cols": cols, "--rows": Math.ceil(cards.length / cols) }}>
               {cards.map((c, i) => {
                 const canPlay = c.state === "down" && turn === myMark && !result;
                 const cls =

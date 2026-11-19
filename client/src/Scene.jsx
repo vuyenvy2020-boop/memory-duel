@@ -399,17 +399,19 @@ const BUBBLES = Array.from({ length: 16 }, (_, i) => ({
 
 function LilyPads() {
   const pads = [
-    [120, 70, 70],
-    [300, 92, 52],
-    [560, 76, 64],
-    [860, 90, 56],
-    [1120, 72, 70],
-    [1330, 92, 50],
+    [110, 74, 70],
+    [290, 92, 50],
+    [520, 78, 62],
+    [780, 92, 54],
+    [1010, 74, 68],
+    [1240, 90, 52],
+    [1390, 76, 56],
   ];
   const lotus = [
-    [160, 56],
-    [600, 60],
-    [1160, 58],
+    [150, 58],
+    [560, 62],
+    [1050, 60],
+    [1330, 58],
   ];
   return (
     <svg className="fw-lily" viewBox="0 0 1440 120" preserveAspectRatio="xMidYMax slice">
@@ -418,7 +420,7 @@ function LilyPads() {
       ))}
       {lotus.map(([x, y], i) => (
         <g key={i} transform={`translate(${x} ${y})`}>
-          {[-30, -15, 0, 15, 30].map((a) => (
+          {[-32, -16, 0, 16, 32].map((a) => (
             <ellipse key={a} cx="0" cy="-14" rx="7" ry="16" fill="#f9a8d4" transform={`rotate(${a})`} />
           ))}
           <circle cx="0" cy="-2" r="5" fill="#fde68a" />
@@ -430,9 +432,33 @@ function LilyPads() {
 
 function LakeScene({ game }) {
   return (
-    <div className="fw lake" aria-hidden="true">
+    <div className={"fw magic" + (game ? " game" : "")} aria-hidden="true">
       <div className="fw-rays" />
-      <Sparkles n={game ? 10 : 22} maxTop={80} />
+      <Moon />
+      <Sparkles n={game ? 14 : 26} maxTop={44} />
+      <BigStars />
+
+      {/* Mặt hồ, bờ cây và lâu đài xa */}
+      <div className="mg-water" />
+      <svg className="mg-shore" viewBox="0 0 1440 200" preserveAspectRatio="none">
+        <path
+          d="M0 120 C200 70 420 112 640 92 C880 70 1100 112 1440 62 V200 H0 Z"
+          fill="var(--shoreA)"
+        />
+        <g fill="var(--shoreB)">
+          {[60, 150, 250, 340, 520, 640, 760, 1190, 1290, 1380].map((x, i) => (
+            <circle key={i} cx={x} cy={96 - (i % 3) * 8} r={20 + (i % 3) * 5} />
+          ))}
+        </g>
+        <path
+          d="M0 150 C260 110 560 160 800 132 C1040 104 1240 150 1440 120 V200 H0 Z"
+          fill="var(--shoreA)"
+        />
+      </svg>
+      <Castle />
+
+      <span className="mg-swan s1">🦢</span>
+      <span className="mg-swan s2">🦢</span>
       {BUBBLES.slice(0, game ? 9 : 16).map((b, i) => (
         <span
           key={i}
@@ -447,6 +473,8 @@ function LakeScene({ game }) {
         />
       ))}
       <LilyPads />
+      {!game && <Butterflies />}
+      {!game && <Petals />}
     </div>
   );
 }

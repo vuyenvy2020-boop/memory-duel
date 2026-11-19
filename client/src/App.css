@@ -2962,3 +2962,218 @@ input.code {
 @media (prefers-reduced-motion: reduce) {
   .fw * { animation: none !important; }
 }
+
+/* ============ HỒ PHÉP THUẬT: PHÒNG CHỜ VÀ MÀN HÌNH CHƠI ============ */
+.fw.magic {
+  --shoreA: #a7e3c0;
+  --shoreB: #86d3a8;
+  --wall: #cdbcf4;
+  --wdark: #b4a2e6;
+  --roof: #f7aad2;
+  background: linear-gradient(180deg, #6fd3e3 0%, #92b8f4 32%, #c8aaf2 54%, #f9bde0 68%);
+}
+.fw.magic::after { display: none; }
+.fw.magic .moon { top: 5%; left: auto; right: 9%; width: min(90px, 8vw); }
+
+.mg-water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38vh;
+  overflow: hidden;
+  background: linear-gradient(180deg, #a9dcf8 0%, #86b9f0 42%, #a98be8 100%);
+}
+.mg-water::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -64px;
+  right: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 60px, rgba(255, 255, 255, 0.16) 60px 64px);
+  animation: mgshimmer 7s linear infinite;
+}
+@keyframes mgshimmer { to { transform: translateX(64px); } }
+
+.mg-shore {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 36vh;
+  width: 100%;
+  height: 14vh;
+}
+.fw.magic .fw-castle {
+  left: auto;
+  right: 7%;
+  bottom: 37vh;
+  height: 30vh;
+  opacity: 0.85;
+  filter: drop-shadow(0 6px 14px rgba(80, 40, 130, 0.25));
+}
+.fw.magic.game .fw-castle { opacity: 0.4; }
+
+.mg-swan { position: absolute; bottom: 14vh; font-size: 34px; animation: mgswim 36s linear infinite; }
+.mg-swan.s2 { bottom: 22vh; font-size: 26px; animation-duration: 52s; animation-delay: -20s; }
+@keyframes mgswim {
+  from { transform: translateX(-12vw); }
+  to { transform: translateX(112vw); }
+}
+
+/* ============ MÀN HÌNH CHƠI: NGỌC TRAI VÀ VÀNG ÁNH KIM ============ */
+.scene-game {
+  --text: #4b2a63;
+  --muted: #8a6aa0;
+  --line: rgba(180, 120, 200, 0.4);
+  color: var(--text);
+}
+.scene-game .topbar { width: min(760px, 100%); }
+.scene-game .logo .lx { color: #e0488f; text-shadow: 0 2px 0 #fff, 0 0 14px rgba(255, 255, 255, 0.8); animation: none; }
+.scene-game .logo .lo { color: #7c4dff; text-shadow: 0 2px 0 #fff, 0 0 14px rgba(255, 255, 255, 0.8); animation: none; }
+.scene-game .room-tag {
+  color: #5b2a86;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #f5d27a;
+}
+.scene-game .icon-btn {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.88);
+  border-color: #f0c4e2;
+}
+.scene-game .icon-btn:hover { background: #fff; }
+
+/* Cột chính ôm sát bàn thẻ */
+.scene-game .main { width: max-content; max-width: 100%; min-width: min(560px, 100%); }
+.scene-game .players,
+.scene-game .timer { width: 100%; }
+
+/* Thẻ người chơi */
+.scene-game .player {
+  color: var(--text);
+  opacity: 0.82;
+  background: rgba(255, 255, 255, 0.88);
+  border: 2px solid rgba(226, 170, 215, 0.7);
+  box-shadow: 0 8px 22px rgba(120, 60, 150, 0.18);
+}
+.scene-game .player.X { background: linear-gradient(135deg, #fff, #ffe1f0); }
+.scene-game .player.O { background: linear-gradient(135deg, #fff, #d8f6ee); }
+.scene-game .player.active {
+  opacity: 1;
+  border-color: #f5b400;
+  box-shadow: 0 0 0 4px rgba(245, 180, 0, 0.25), 0 10px 28px rgba(120, 60, 150, 0.3);
+}
+.scene-game .avatar.X { background: #ffc7e0; box-shadow: 0 0 0 3px #fff; }
+.scene-game .avatar.O { background: #bff0e2; box-shadow: 0 0 0 3px #fff; }
+.scene-game .player.X .score { color: #e0488f; text-shadow: none; }
+.scene-game .player.O .score { color: #1fae96; text-shadow: none; }
+.scene-game .p-mark,
+.scene-game .score small { color: var(--muted); }
+
+/* Trạng thái lượt và thanh giờ */
+.scene-game .status {
+  color: #5b2a86;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #f0c4e2;
+}
+.scene-game .status.mine {
+  background: linear-gradient(135deg, #fff3c4, #ffd6ec);
+  border-color: #f5b400;
+  box-shadow: 0 0 22px rgba(245, 180, 0, 0.45);
+}
+.scene-game .timer {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #f0c4e2;
+}
+.scene-game .timer-bar { background: linear-gradient(90deg, #7ee0cb, #8fb4f2 55%, #c4a8f0); }
+.scene-game .timer.warn .timer-bar { background: linear-gradient(90deg, #ffe08a, #ffc15e); }
+.scene-game .timer.danger .timer-bar { background: linear-gradient(90deg, #ff9fb8, #ff7a9a); }
+.scene-game .timer span { color: #4b2a63; font-weight: 700; }
+
+/* Khung vàng ánh kim và thẻ bài */
+.scene-game .mboard {
+  --cardw: min(120px, 15vw, max(52px, calc((100vh - 400px) / (var(--rows, 4) * 1.2 + 0.4))));
+  position: relative;
+  padding: 20px;
+  border-radius: 26px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.6), rgba(255, 232, 248, 0.45));
+  border: 3px solid #f5d27a;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 214, 120, 0.45),
+    0 24px 60px rgba(60, 30, 120, 0.3);
+}
+.scene-game .mboard::before {
+  content: "👑";
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  font-size: 32px;
+  line-height: 1;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 3px 4px rgba(120, 70, 20, 0.35));
+}
+.scene-game .mfront {
+  color: #ffe08a;
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.5), transparent 45%),
+    linear-gradient(145deg, #8be0cf, #a99cf2 55%, #f6a8d3);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85), inset 0 0 0 5px rgba(245, 210, 122, 0.9),
+    0 6px 14px rgba(60, 30, 120, 0.3);
+}
+.scene-game .mback {
+  background: linear-gradient(160deg, #fff, #fff2fb);
+  box-shadow: inset 0 0 0 2px #f0c4e2, 0 6px 14px rgba(60, 30, 120, 0.25);
+}
+.scene-game .mcard.matched.X .mback { box-shadow: 0 0 0 3px #f472b6, 0 0 18px #f9a8d4; }
+.scene-game .mcard.matched.O .mback { box-shadow: 0 0 0 3px #34c3a6, 0 0 18px #7ee0cb; }
+
+/* Khung chat */
+.scene-game .chat {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #f0c4e2;
+  box-shadow: 0 20px 50px rgba(60, 30, 120, 0.25);
+}
+.scene-game .chat-title,
+.scene-game .emoji-row,
+.scene-game .chat-input { border-color: #f0c4e2; }
+.scene-game .bubble { background: #f3e9ff; }
+.scene-game .msg.mine .bubble { color: #fff; background: linear-gradient(135deg, #f9a8d4, #a78bfa); }
+.scene-game .msg-name.X { color: #d6246e; }
+.scene-game .msg-name.O { color: #0f9d8a; }
+.scene-game .chat-empty { color: var(--muted); }
+.scene-game input {
+  color: var(--text);
+  background: #fff;
+  border-color: #e9c5df;
+}
+.scene-game input:focus { border-color: #d946a8; box-shadow: 0 0 0 3px rgba(217, 70, 168, 0.2); }
+.scene-game .btn:not(.primary) {
+  color: var(--text);
+  background: #fff;
+  border-color: #e9c5df;
+}
+
+/* Popup kết quả */
+.scene-game .overlay { background: rgba(70, 40, 130, 0.42); }
+.scene-game .popup {
+  color: var(--text);
+  background: #fff;
+  border: 3px solid #f5d27a;
+  box-shadow: 0 30px 80px rgba(60, 30, 120, 0.4);
+}
+.scene-game .popup .sub { color: var(--muted); }
+.scene-game .popup .reward { color: #c98a00; }
+.scene-game .popup.win h2 { color: #e08a1a; text-shadow: 0 0 18px rgba(245, 180, 0, 0.35); }
+.scene-game .popup.lose h2 { color: #8a6aa0; }
+.scene-game .popup.draw h2 { color: #5b8def; }
+
+@media (max-height: 760px) {
+  .fw.magic .fw-castle { height: 26vh; }
+}
+@media (max-width: 880px) {
+  .fw.magic .fw-castle { height: 22vh; right: -4%; }
+  .scene-game .main { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fw.magic * { animation: none !important; }
+}
