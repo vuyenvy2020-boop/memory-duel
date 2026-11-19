@@ -97,6 +97,8 @@ export default function App() {
     readNotes: () =>
       P.update((p) => ({ ...p, notes: p.notes.map((n) => ({ ...n, read: true })) })),
     logout: P.logout,
+        rename: P.rename,
+    changePassword: P.changePassword,
   };
 
   // Các mảnh pháo giấy, tạo một lần
@@ -333,7 +335,7 @@ export default function App() {
   /* ---------- Chưa có tài khoản: màn hình đăng nhập ---------- */
   if (!profile)
     return (
-      <Shell mode="home">
+      <Shell mode="login">
         <AuthPage auth={P} />
       </Shell>
     );
@@ -345,6 +347,7 @@ export default function App() {
         <Home
           profile={profile}
           api={api}
+            user={P.user}
           invite={invite}
           onMatch={onMatch}
           onCreate={onCreate}
@@ -514,7 +517,7 @@ export default function App() {
                 return (
                   <button key={i} className={cls} onClick={() => flip(i)}>
                     <div className="mcard-in">
-                      <div className="mface mfront">?</div>
+                      <div className="mface mfront">👑</div>
                       <div className="mface mback">{c.face}</div>
                     </div>
                   </button>

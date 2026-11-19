@@ -19,7 +19,7 @@ const AVATARS = [
   "🦊", "🐧", "🐱", "🐶", "🐼", "🐰",
   "🐸", "🦉", "🐯", "🐨", "🦄", "🐙",
 ];
-const FACES = ["🍎", "🍌", "🍇", "🍓", "🍉", "🍒", "🍑", "🥝", "🍍", "🥑", "🍋", "🥥"];
+const FACES = ["🍰", "🧁", "🍭", "🍬", "🍪", "🍩", "🍓", "🍒", "🍑", "🍇", "🍉", "🍋"];
 const LEVELS = {
   easy: { label: "Dễ", pairs: 6, cols: 4, remember: 0.3 },
   normal: { label: "Vừa", pairs: 8, cols: 4, remember: 0.65 },
@@ -71,8 +71,14 @@ const FRAMES = [
   "none", "gold", "emerald", "candy", "neon", "flower",
   "ice", "fire", "rainbow", "galaxy", "royal",
 ];
+const PRINCESS_AVATARS = [
+  "👸🏻", "👸🏼", "👸🏽", "👸🏾", "👸🏿", "🧜", "🧝", "🧚", "💃", "👰", "🤴", "🧙",
+  "🐥", "🐱", "🐰", "🦔", "🐶", "🐼", "🦊", "🐻", "🐑", "🦌", "🦉", "🐴", "🦄",
+];
 const cleanAvatar = (a, fallback) =>
-  AVATARS.includes(a) || PREMIUM_AVATARS.includes(a) ? a : fallback;
+  AVATARS.includes(a) || PREMIUM_AVATARS.includes(a) || PRINCESS_AVATARS.includes(a)
+    ? a
+    : fallback;
 const cleanFrame = (f) => (FRAMES.includes(f) ? f : "none");
 const cleanName = (n) => String(n || "Người chơi").trim().slice(0, 16) || "Người chơi";
 const newRoomId = () => Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -412,6 +418,50 @@ io.on("connection", (socket) => {
     socket.data.profileId = null;
   });
 
+    // Đổi tên hiển thị
+  socket.on("account:rename", ({ display } = {}, cb) => {
+    if (typeof cb !== "function") return;
+    const key = socket.data.user;
+    if (!key || !users[key]) return cb({ error: "Bạn chưa đăng nhập" });
+    const name = String(display || "").trim().slice(0, 16);
+    if (!name) return cb({ error: "Tên hiển thị không được để trống" });
+    users[key].display = name;
+    if (users[key].profile) users[key].profile.name = name;
+    persistUsers();
+    cb({ ok: true, display: name });
+  });
+
+  // Đổi mật khẩu (phải nhập đúng mật khẩu hiện tại)
+  socket.on("account:password", ({ oldPassword, newPassword } = {}, cb) => {
+    if (typeof cb !== "function") return;
+    const key = socket.data.user;
+    const u = key && users[key];
+    if (!u) return cb({ error: "Bạn chưa đăng nhập" });
+    const lockKey = "pw:" + key;
+    const f = failed.get(lockKey);
+    if (f && f.until > Date.now()) {
+      const s = Math.ceil((f.until - Date.now()) / 1000);
+      return cb({ error: "Nhập sai nhiều lần, hãy thử lại sau " + s + " giây" });
+    }
+    if (!checkPw(String(oldPassword || ""), u)) {
+      const n = (f?.n || 0) + 1;
+      failed.set(lockKey, n >= 5 ? { n: 0, until: Date.now() + 30000 } : { n, until: 0 });
+      return cb({ error: "Mật khẩu hiện tại chưa đúng" });
+    }
+    failed.delete(lockKey);
+    const pw = String(newPassword || "");
+    if (pw.length < 6 || pw.length > 100)
+      return cb({ error: "Mật khẩu mới cần từ 6 đến 100 ký tự" });
+    u.salt = crypto.randomBytes(16).toString("hex");
+    u.hash = hashPw(pw, u.salt);
+    persistUsers();
+    // Đăng xuất các phiên cũ, cấp phiên mới cho thiết bị này
+    for (const [t, k] of sessions) if (k === key) sessions.delete(t);
+    const token = crypto.randomBytes(24).toString("hex");
+    sessions.set(token, key);
+    cb({ ok: true, token });
+  });
+  
   // Lưu hồ sơ (xu, nhiệm vụ, lịch sử...) của tài khoản đang đăng nhập
   socket.on("profile:save", ({ profile } = {}) => {
     const key = socket.data.user;

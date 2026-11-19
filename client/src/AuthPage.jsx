@@ -41,7 +41,7 @@ export default function AuthPage({ auth }) {
     password: "",
     confirm: "",
     display: "",
-    avatar: "🦊",
+    avatar: "👸🏻",
   });
   const [remember, setRemember] = useState(!!auth.lastUser);
   const [showPw, setShowPw] = useState(false);
@@ -133,9 +133,9 @@ export default function AuthPage({ auth }) {
       {/* Bên trái: giới thiệu game */}
       <section className="auth-hero">
         <div className="auth-fcards" aria-hidden="true">
-          <div className="fc a">🍓</div>
+          <div className="fc a">👑</div>
           <div className="fc b">?</div>
-          <div className="fc c">🍇</div>
+          <div className="fc c">💎</div>
         </div>
         <h1 className="logo">
           <span className="lx">Memory</span> <span className="lo">Duel</span>
@@ -156,6 +156,9 @@ export default function AuthPage({ auth }) {
 
       {/* Bên phải: biểu mẫu */}
       <form className="auth-card" onSubmit={submit} noValidate>
+                <h1 className="logo brand">
+          <span className="lx">Memory</span> <span className="lo">Duel</span>
+        </h1>
         <div className="tabs" role="tablist">
           <button
             type="button"

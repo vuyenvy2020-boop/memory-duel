@@ -57,6 +57,7 @@ export function useAuth() {
   const [status, setStatus] = useState(() => (getToken() ? "loading" : "out")); // loading | out | in
   const [online, setOnline] = useState(socket.connected);
   const [profile, setProfile] = useState(null);
+  const [user, setUser] = useState(null);
   const [notice, setNotice] = useState("");
   const ref = useRef(null); // hồ sơ mới nhất
 
@@ -65,14 +66,22 @@ export function useAuth() {
     setProfile(p);
   };
 
+  const reset = () => {
+    setToken("");
+    setP(null);
+    setUser(null);
+    setStatus("out");
+  };
+
   // Vào game: chưa có hồ sơ thì tạo mới và lưu lên server
-  const enter = (user, prof) => {
+  const enter = (u, prof) => {
     let p = prof;
     if (!p) {
-      p = newProfile(user.display, user.avatar);
+      p = newProfile(u.display, u.avatar);
       socket.emit("profile:save", { profile: p });
     }
     setP(p);
+    setUser(u);
     setStatus("in");
   };
 
@@ -83,18 +92,12 @@ export function useAuth() {
       if (!token) return;
       socket.emit("auth:resume", { token }, (res) => {
         if (res?.ok) enter(res.user, res.profile);
-        else {
-          setToken("");
-          setP(null);
-          setStatus("out");
-        }
+        else reset();
       });
     };
     const gone = () => setOnline(false);
     const kicked = () => {
-      setToken("");
-      setP(null);
-      setStatus("out");
+      reset();
       setNotice("Tài khoản này vừa đăng nhập ở một nơi khác nên bạn đã bị đăng xuất.");
     };
     socket.on("connect", resume);
@@ -132,17 +135,11 @@ export function useAuth() {
 
   const logout = () => {
     socket.emit("auth:logout", { token: getToken() });
-    setToken("");
-    setP(null);
-    setStatus("out");
+    reset();
   };
 
   // Dùng khi không khôi phục được phiên (server tắt, token cũ)
-  const forget = () => {
-    setToken("");
-    setP(null);
-    setStatus("out");
-  };
+  const forget = () => reset();
 
   // Cập nhật hồ sơ rồi lưu lên server
   const update = (fn) => {
@@ -153,10 +150,28 @@ export function useAuth() {
     socket.emit("profile:save", { profile: next });
   };
 
+  // Đổi tên hiển thị
+  const rename = async (display) => {
+    const res = await ask("account:rename", { display });
+    if (res.ok) {
+      setUser((u) => (u ? { ...u, display: res.display } : u));
+      update((p) => ({ ...p, name: res.display }));
+    }
+    return res;
+  };
+
+  // Đổi mật khẩu
+  const changePassword = async (oldPassword, newPassword) => {
+    const res = await ask("account:password", { oldPassword, newPassword });
+    if (res.ok) setToken(res.token);
+    return res;
+  };
+
   return {
     status,
     online,
     notice,
+    user,
     lastUser: getLastUser(),
     profile: profile ? ensureDay(profile) : null,
     login,
@@ -164,5 +179,7 @@ export function useAuth() {
     logout,
     forget,
     update,
+    rename,
+    changePassword,
   };
 }

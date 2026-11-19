@@ -7,6 +7,7 @@ import {
   LeaderboardPanel,
   NotifyPanel,
   HistoryPanel,
+    AccountPanel,
 } from "./Panels";
 import { EVENTS } from "./profile";
 
@@ -21,9 +22,10 @@ const ACTIONS = [
   { id: "rank", icon: "🏆", label: "Xếp hạng" },
   { id: "history", icon: "📜", label: "Lịch sử" },
   { id: "notify", icon: "🔔", label: "Thông báo" },
+  { id: "account", icon: "⚙️", label: "Tài khoản" },
 ];
 
-export default function Home({ profile, api, invite, onMatch, onCreate, onJoin, onAI }) {
+export default function Home({ profile, api, user, invite, onMatch, onCreate, onJoin, onAI }) {
   const [level, setLevel] = useState("normal");
   const [code, setCode] = useState(invite || "");
   const [modal, setModal] = useState(null);
@@ -69,7 +71,7 @@ export default function Home({ profile, api, invite, onMatch, onCreate, onJoin, 
         <div className="mascots">
           <span className="m1">{profile.avatar}</span>
           <span className="m-vs">VS</span>
-          <span className="m2">🃏</span>
+          <span className="m2">👑</span>
         </div>
         <h1 className="logo">
           <span className="lx">Memory</span> <span className="lo">Duel</span>
@@ -174,6 +176,11 @@ export default function Home({ profile, api, invite, onMatch, onCreate, onJoin, 
       {modal === "history" && (
         <Modal title="📜 Lịch sử trận đấu" onClose={close}>
           <HistoryPanel profile={profile} />
+        </Modal>
+      )}
+            {modal === "account" && (
+        <Modal title="⚙️ Tài khoản của bạn" onClose={close}>
+          <AccountPanel profile={profile} user={user} api={api} />
         </Modal>
       )}
       {modal === "notify" && (

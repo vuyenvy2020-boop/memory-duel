@@ -1,6 +1,6 @@
 export const AVATARS = [
-  "🦊", "🐧", "🐱", "🐶", "🐼", "🐰",
-  "🐸", "🦉", "🐯", "🐨", "🦄", "🐙",
+  "👸🏻", "👸🏼", "👸🏽", "👸🏾", "👸🏿", "🧜",
+  "🧝", "🧚", "💃", "👰", "🤴", "🧙",
 ];
 
 export default function AvatarPicker({ value, onChange }) {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { socket } from "./socket";
 import { AVATARS } from "./AvatarPicker";
 import { MISSIONS, PREMIUM_AVATARS, FRAMES, DAILY_COINS, todayStr } from "./profile";
@@ -25,7 +26,7 @@ export function Face({ avatar, frame = "none", size = 44 }) {
 
 /* Cửa sổ nổi */
 export function Modal({ title, onClose, children }) {
-  return (
+  return createPortal(
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
@@ -36,7 +37,8 @@ export function Modal({ title, onClose, children }) {
         </div>
         <div className="modal-body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -266,6 +268,138 @@ export function HistoryPanel({ profile }) {
           </b>
         </div>
       ))}
+    </>
+  );
+}
+
+/* ⚙️ Tài khoản: đổi tên hiển thị, đổi mật khẩu */
+export function AccountPanel({ profile, user, api }) {
+  const [name, setName] = useState(profile.name);
+  const [nameMsg, setNameMsg] = useState(null);
+  const [f, setF] = useState({ old: "", pw: "", cf: "" });
+  const [show, setShow] = useState(false);
+  const [pwMsg, setPwMsg] = useState(null);
+  const [busy, setBusy] = useState("");
+
+  const saveName = async () => {
+    const v = name.trim();
+    if (!v) return setNameMsg({ err: "Tên hiển thị không được để trống" });
+    if (v === profile.name) return setNameMsg({ err: "Đây đang là tên hiện tại của bạn" });
+    setBusy("name");
+    const res = await api.rename(v);
+    setBusy("");
+    setNameMsg(res.ok ? { ok: "Đã đổi tên thành công!" } : { err: res.error });
+  };
+
+  const savePw = async () => {
+    if (!f.old) return setPwMsg({ err: "Hãy nhập mật khẩu hiện tại" });
+    if (f.pw.length < 6) return setPwMsg({ err: "Mật khẩu mới cần ít nhất 6 ký tự" });
+    if (f.pw === f.old) return setPwMsg({ err: "Mật khẩu mới phải khác mật khẩu cũ" });
+    if (f.pw !== f.cf) return setPwMsg({ err: "Mật khẩu nhập lại chưa khớp" });
+    setBusy("pw");
+    const res = await api.changePassword(f.old, f.pw);
+    setBusy("");
+    if (res.ok) {
+      setF({ old: "", pw: "", cf: "" });
+      setPwMsg({ ok: "Đã đổi mật khẩu. Các thiết bị khác sẽ phải đăng nhập lại." });
+    } else {
+      setPwMsg({ err: res.error });
+    }
+  };
+
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const type = show ? "text" : "password";
+
+  return (
+    <>
+      <div className="acc-user">
+        <Face avatar={profile.avatar} frame={profile.frame} size={52} />
+        <div className="row-main">
+          <b>{profile.name}</b>
+          <small>Tên đăng nhập: @{user?.username || "..."}</small>
+        </div>
+      </div>
+
+      <div className="acc-sec">
+        <h4>✏️ Đổi tên hiển thị</h4>
+        <div className="field">
+          <label htmlFor="ac-name">Tên mới</label>
+          <input
+            id="ac-name"
+            maxLength={16}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && saveName()}
+          />
+          <small className="field-hint">
+            Tối đa 16 ký tự, hiện trong phòng chơi và bảng xếp hạng.
+          </small>
+        </div>
+        {nameMsg && (
+          <div className={"acc-msg " + (nameMsg.ok ? "ok" : "err")}>
+            {nameMsg.ok || nameMsg.err}
+          </div>
+        )}
+        <button className="btn primary" disabled={busy === "name"} onClick={saveName}>
+          {busy === "name" ? "Đang lưu..." : "Lưu tên"}
+        </button>
+      </div>
+
+      <div className="acc-sec">
+        <h4>🔒 Đổi mật khẩu</h4>
+        <div className="field">
+          <label htmlFor="ac-old">Mật khẩu hiện tại</label>
+          <div className="pw-wrap">
+            <input
+              id="ac-old"
+              type={type}
+              autoComplete="current-password"
+              value={f.old}
+              onChange={set("old")}
+            />
+            <button
+              type="button"
+              className="eye"
+              aria-label={show ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              onClick={() => setShow(!show)}
+            >
+              {show ? "🙈" : "👁"}
+            </button>
+          </div>
+        </div>
+        <div className="field">
+          <label htmlFor="ac-new">Mật khẩu mới</label>
+          <input
+            id="ac-new"
+            type={type}
+            autoComplete="new-password"
+            placeholder="Ít nhất 6 ký tự"
+            value={f.pw}
+            onChange={set("pw")}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="ac-cf">Nhập lại mật khẩu mới</label>
+          <input
+            id="ac-cf"
+            type={type}
+            autoComplete="new-password"
+            value={f.cf}
+            onChange={set("cf")}
+            onKeyDown={(e) => e.key === "Enter" && savePw()}
+          />
+        </div>
+        {pwMsg && (
+          <div className={"acc-msg " + (pwMsg.ok ? "ok" : "err")}>{pwMsg.ok || pwMsg.err}</div>
+        )}
+        <button className="btn primary" disabled={busy === "pw"} onClick={savePw}>
+          {busy === "pw" ? "Đang lưu..." : "Đổi mật khẩu"}
+        </button>
+      </div>
+
+      <button className="btn" onClick={api.logout}>
+        Đăng xuất
+      </button>
     </>
   );
 }
