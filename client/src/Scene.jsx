@@ -1,4 +1,6 @@
 /* ---------- Hình trang trí dùng chung ---------- */
+
+import Ambient from "./Ambient";
 function Sparkles({ n = 24, maxTop = 50 }) {
   return (
     <>
@@ -486,6 +488,7 @@ export function Shell({ children, mode = "home" }) {
       {mode === "login" && <World time="dawn" />}
       {mode === "home" && <World time="dusk" />}
       {(mode === "wait" || mode === "game") && <LakeScene game={mode === "game"} />}
+            <Ambient mode={mode} />
       <main className="content">{children}</main>
     </div>
   );

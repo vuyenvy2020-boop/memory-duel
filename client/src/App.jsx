@@ -19,6 +19,13 @@ const EMOJIS = ["👍", "😂", "😮", "😡", "🔥", "👏"];
 const CONFETTI_COLORS = ["#ff5c8a", "#4de1ff", "#facc15", "#8b5cf6", "#34d399"];
 const LEVEL_LABEL = { easy: "Dễ", normal: "Vừa", hard: "Khó" };
 
+// Xu thưởng theo cấp độ: thắng, hòa, thua
+const REWARD = {
+  easy: { win: 10, draw: 5, lose: 2 },
+  normal: { win: 20, draw: 10, lose: 5 },
+  hard: { win: 30, draw: 15, lose: 8 },
+};
+
 /* ---------- Âm thanh tự tạo, không cần file ---------- */
 let audioCtx;
 let soundOn = true;
@@ -229,7 +236,7 @@ export default function App() {
       const oppMark = myMark === "X" ? "O" : "X";
       const opp = players.find((p) => p.mark === oppMark);
       const human = !vsAI;
-      const coins = r === "win" ? (human ? 20 : 10) : r === "draw" ? 8 : 5;
+      const coins = (REWARD[roomLevel] || REWARD.normal)[r];
       setEarned(coins);
       P.update((p) => {
         try {

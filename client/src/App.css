@@ -3177,3 +3177,313 @@ input.code {
 @media (prefers-reduced-motion: reduce) {
   .fw.magic * { animation: none !important; }
 }
+
+/* ============ LUNG LINH VÀ CHILL: LỚP TRANG TRÍ ============ */
+.amb {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.amb::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 65% 42% at 50% 0%, rgba(255, 240, 200, 0.28), transparent 70%);
+}
+
+/* Tia nắng bình minh (trang đăng nhập) */
+.amb-rays {
+  position: absolute;
+  top: 0;
+  left: 52%;
+  width: 190vmax;
+  height: 190vmax;
+  margin: -95vmax 0 0 -95vmax;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 246, 200, 0.2) 0 5deg, transparent 5deg 17deg);
+  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9), transparent 42%);
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9), transparent 42%);
+  animation: ambspin 160s linear infinite;
+}
+@keyframes ambspin { to { transform: rotate(360deg); } }
+
+/* Cực quang (trang chủ, phòng chờ, ván chơi) */
+.amb-aurora {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: 42vh;
+  filter: blur(48px);
+  mix-blend-mode: screen;
+  opacity: 0.45;
+  animation: ambaur 22s ease-in-out infinite alternate;
+}
+.amb-aurora.a {
+  top: 0;
+  background: linear-gradient(90deg, transparent, #7ee0cb 25%, #a99cf2 55%, #f9a8d4 80%, transparent);
+}
+.amb-aurora.b {
+  top: 8vh;
+  height: 32vh;
+  opacity: 0.35;
+  background: linear-gradient(90deg, transparent, #fde68a 30%, #f9a8d4 60%, #8fb4f2 85%, transparent);
+  animation-duration: 30s;
+  animation-direction: alternate-reverse;
+}
+.amb.game .amb-aurora { opacity: 0.25; }
+@keyframes ambaur {
+  0% { transform: translateX(-6%) skewY(-3deg); }
+  100% { transform: translateX(6%) skewY(3deg) scaleY(1.2); }
+}
+
+/* Quầng sáng bokeh trôi lên */
+.amb-orb {
+  position: absolute;
+  bottom: -140px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: amborb linear infinite;
+}
+.amb-orb.c0 { background: radial-gradient(circle, rgba(126, 224, 203, 0.5), transparent 70%); }
+.amb-orb.c1 { background: radial-gradient(circle, rgba(249, 168, 212, 0.5), transparent 70%); }
+.amb-orb.c2 { background: radial-gradient(circle, rgba(196, 181, 253, 0.5), transparent 70%); }
+.amb-orb.c3 { background: radial-gradient(circle, rgba(253, 230, 138, 0.5), transparent 70%); }
+@keyframes amborb {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 0.8; }
+  100% { transform: translate(30px, -125vh); opacity: 0; }
+}
+
+/* Sao lấp lánh */
+.amb-tw {
+  position: absolute;
+  color: #fff7c2;
+  text-shadow: 0 0 10px #fff3a0, 0 0 22px rgba(255, 214, 120, 0.7);
+  animation: ambtw 4s ease-in-out infinite;
+}
+.amb.login .amb-tw { color: #fff; text-shadow: 0 0 10px #ffd1ea, 0 0 22px rgba(255, 190, 230, 0.7); }
+@keyframes ambtw {
+  0%, 100% { opacity: 0.15; transform: scale(0.6) rotate(0); }
+  50% { opacity: 1; transform: scale(1.15) rotate(20deg); }
+}
+
+/* Sao băng */
+.amb-shoot {
+  position: absolute;
+  width: 140px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0));
+  box-shadow: 0 0 6px #fff;
+  opacity: 0;
+  transform: rotate(-28deg);
+}
+.amb-shoot.s1 { top: 12%; left: 78%; animation: ambshoot 9s ease-in infinite 2s; }
+.amb-shoot.s2 { top: 26%; left: 92%; animation: ambshoot 13s ease-in infinite 7s; }
+@keyframes ambshoot {
+  0% { opacity: 0; transform: translate(0, 0) rotate(-28deg); }
+  2% { opacity: 1; }
+  9% { opacity: 0; transform: translate(-420px, 222px) rotate(-28deg); }
+  100% { opacity: 0; }
+}
+
+/* Đèn lồng bay lên */
+.amb-lantern {
+  position: absolute;
+  bottom: -70px;
+  width: var(--ls);
+  height: calc(var(--ls) * 1.25);
+  border-radius: 38% 38% 46% 46%;
+  opacity: 0;
+  animation: ambrise linear infinite;
+}
+.amb-lantern.h0 { background: linear-gradient(180deg, #fff1a8, #ffc98a); box-shadow: 0 0 22px 8px rgba(255, 214, 120, 0.55); }
+.amb-lantern.h1 { background: linear-gradient(180deg, #ffd6ec, #f9a8d4); box-shadow: 0 0 22px 8px rgba(249, 168, 212, 0.55); }
+.amb-lantern.h2 { background: linear-gradient(180deg, #e3d4ff, #b9a4f5); box-shadow: 0 0 22px 8px rgba(185, 164, 245, 0.55); }
+.amb-lantern::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: calc(var(--ls) * 0.5);
+  background: rgba(255, 255, 255, 0.45);
+}
+.amb-lantern i {
+  position: absolute;
+  inset: 25% 28%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  filter: blur(2px);
+  animation: ambflick 2.4s ease-in-out infinite alternate;
+}
+.amb.game .amb-lantern { filter: saturate(0.9); }
+@keyframes ambflick { to { opacity: 0.55; transform: scale(0.8); } }
+@keyframes ambrise {
+  0% { transform: translate(0, 0); opacity: 0; }
+  8% { opacity: 0.95; }
+  50% { transform: translate(22px, -62vh); }
+  92% { opacity: 0.8; }
+  100% { transform: translate(-12px, -122vh); opacity: 0; }
+}
+
+/* Chim bồ câu bay ngang */
+.amb-bird {
+  position: absolute;
+  left: 0;
+  font-size: 26px;
+  animation: ambbird linear infinite;
+}
+@keyframes ambbird {
+  0% { transform: translate(112vw, 0); }
+  50% { transform: translate(52vw, -26px); }
+  100% { transform: translate(-12vw, 8px); }
+}
+
+/* Thỏ nhảy trên đồng cỏ */
+.amb-rabbit {
+  position: absolute;
+  bottom: 9vh;
+  left: 0;
+  font-size: 28px;
+  animation: ambrun 60s linear infinite;
+}
+.amb-rabbit > span { display: inline-block; animation: ambhop 0.9s ease-in-out infinite; }
+@keyframes ambrun {
+  from { transform: translateX(104vw); }
+  to { transform: translateX(-10vw); }
+}
+@keyframes ambhop { 50% { transform: translateY(-16px); } }
+
+/* Cá nhảy khỏi mặt hồ và vòng sóng (phòng chờ, ván chơi) */
+.amb-fish {
+  position: absolute;
+  bottom: 13vh;
+  font-size: 26px;
+  opacity: 0;
+  animation: ambfish 15s ease-in-out infinite;
+}
+.amb-fish.f1 { left: 20%; }
+.amb-fish.f2 { left: 70%; animation-delay: -7s; }
+@keyframes ambfish {
+  0% { transform: translate(0, 0) rotate(-45deg); opacity: 0; }
+  4% { opacity: 1; }
+  10% { transform: translate(40px, -90px) rotate(0); }
+  16% { transform: translate(85px, 0) rotate(55deg); opacity: 1; }
+  18%, 100% { transform: translate(85px, 6px) rotate(55deg); opacity: 0; }
+}
+.amb-ring {
+  position: absolute;
+  bottom: 12vh;
+  width: 90px;
+  height: 26px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  opacity: 0;
+  animation: ambring 15s ease-out infinite;
+}
+.amb-ring.r1 { left: calc(20% + 70px); }
+.amb-ring.r2 { left: calc(70% + 70px); animation-delay: -7s; }
+@keyframes ambring {
+  0%, 13% { transform: scale(0.2); opacity: 0; }
+  16% { transform: scale(0.4); opacity: 0.9; }
+  30% { transform: scale(1.6); opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* ============ CHỮ, KHUNG VÀ THẺ SINH ĐỘNG HƠN ============ */
+
+/* Tên game có vệt sáng chạy qua */
+.scene-home .home2 .logo .lx,
+.scene-home .home2 .logo .lo,
+.scene-login .auth-card .logo .lx,
+.scene-login .auth-card .logo .lo,
+.scene-game .logo .lx,
+.scene-game .logo .lo {
+  --g1: #e0488f;
+  --g2: #ff9bd2;
+  background: linear-gradient(100deg, var(--g1) 25%, var(--g2) 42%, #fff 50%, var(--g2) 58%, var(--g1) 75%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 0 #fff) drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
+  animation: ambshine 5s linear infinite;
+}
+.scene-home .home2 .logo .lo,
+.scene-login .auth-card .logo .lo,
+.scene-game .logo .lo { --g1: #7c4dff; --g2: #b49bff; animation-delay: -0.4s; }
+@keyframes ambshine {
+  from { background-position: 100% 0; }
+  to { background-position: -150% 0; }
+}
+
+/* Thẻ ở trang chủ nổi lên khi rê chuột */
+.scene-home .home2 .mode,
+.scene-home .home2 .event-card {
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.scene-home .home2 .mode:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 44px rgba(168, 85, 247, 0.32), 0 0 0 2px rgba(255, 255, 255, 0.7);
+}
+.scene-home .home2 .event-card:hover { box-shadow: 0 14px 34px rgba(244, 114, 182, 0.35); }
+
+/* Lâu đài: cửa sổ nhấp nháy, công chúa tỏa sáng nhẹ */
+.fw .cwin { animation: ambwin 5s ease-in-out infinite; }
+.fw .cwin:nth-child(2n) { animation-delay: -2s; }
+.fw .cwin:nth-child(3n) { animation-delay: -3.5s; }
+@keyframes ambwin {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; filter: drop-shadow(0 0 6px #ffd166); }
+}
+.fw-princess {
+  filter: drop-shadow(0 8px 12px rgba(80, 40, 120, 0.3)) drop-shadow(0 0 16px rgba(255, 190, 230, 0.55));
+}
+
+/* Màn hình chơi: bàn thẻ thở nhịp nhàng, thẻ tỏa sáng */
+.scene-game .mboard { animation: ambboard 6s ease-in-out infinite; }
+@keyframes ambboard {
+  50% {
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.55), 0 0 64px rgba(255, 214, 120, 0.7),
+      0 24px 60px rgba(60, 30, 120, 0.3);
+  }
+}
+.scene-game .player.active { animation: ambglow 2.4s ease-in-out infinite; }
+@keyframes ambglow {
+  50% {
+    box-shadow: 0 0 0 7px rgba(245, 180, 0, 0.2), 0 12px 36px rgba(245, 180, 0, 0.5);
+  }
+}
+.mcard { position: relative; }
+.mcard.up .mback { animation: ambup 1.2s ease-in-out infinite alternate; }
+@keyframes ambup { to { box-shadow: inset 0 0 0 2px #f0c4e2, 0 0 22px rgba(255, 214, 120, 0.8); } }
+
+/* Ghép đúng: bắn tia sáng */
+.mcard.matched::after,
+.mcard.matched::before {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  animation: ambpop 1.3s ease-out both;
+}
+.mcard.matched::after { content: "✨"; top: -10px; right: -8px; font-size: calc(var(--cardw) * 0.32); }
+.mcard.matched::before { content: "⭐"; bottom: -8px; left: -8px; font-size: calc(var(--cardw) * 0.24); animation-delay: 0.12s; }
+@keyframes ambpop {
+  0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+  40% { transform: scale(1.4) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 0; }
+}
+
+/* Tôn trọng người dùng tắt hiệu ứng chuyển động */
+@media (prefers-reduced-motion: reduce) {
+  .amb *,
+  .amb,
+  .fw .cwin,
+  .scene-game .mboard,
+  .scene-game .player.active { animation: none !important; }
+}

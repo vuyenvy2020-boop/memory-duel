@@ -12,9 +12,9 @@ import {
 import { EVENTS } from "./profile";
 
 const LEVELS = [
-  { id: "easy", label: "Dễ", cards: "12 thẻ" },
-  { id: "normal", label: "Vừa", cards: "16 thẻ" },
-  { id: "hard", label: "Khó", cards: "24 thẻ" },
+  { id: "easy", label: "Dễ", cards: "12 thẻ · +10 🪙" },
+  { id: "normal", label: "Vừa", cards: "16 thẻ · +20 🪙" },
+  { id: "hard", label: "Khó", cards: "24 thẻ · +30 🪙" },
 ];
 const ACTIONS = [
   { id: "missions", icon: "🎯", label: "Nhiệm vụ" },

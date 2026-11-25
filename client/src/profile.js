@@ -35,7 +35,12 @@ export const MISSIONS = [
   { id: "win1", label: "Thắng 1 ván", goal: 1, reward: 50 },
   { id: "pairs10", label: "Tìm được 10 cặp", goal: 10, reward: 40 },
   { id: "human1", label: "Chơi 1 ván với người thật", goal: 1, reward: 40 },
+  { id: "win3", label: "Thắng 3 ván", goal: 3, reward: 70 },
+  { id: "pairs30", label: "Tìm được 30 cặp", goal: 30, reward: 60 },
+  { id: "hardwin", label: "Thắng 1 ván cấp Khó", goal: 1, reward: 80 },
+  { id: "clean", label: "Thắng trắng: đối thủ 0 cặp (cấp Vừa trở lên)", goal: 1, reward: 100 },
 ];
+
 export const EVENTS = [
   {
     id: "e1",
@@ -105,7 +110,13 @@ export function recordGame(p, g) {
   add("play3", 1);
   add("pairs10", g.mine);
   if (g.result === "win") add("win1", 1);
-  if (g.human) add("human1", 1);
+  
+    add("pairs30", g.mine);
+  if (g.result === "win") {
+    add("win3", 1);
+    if (g.level === "hard") add("hardwin", 1);
+    if (g.theirs === 0 && g.level !== "easy") add("clean", 1);
+  }
   return addNote(
     {
       ...p,
